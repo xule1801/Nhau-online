@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Đi nhậu online</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Sân khấu 2D: dùng chung cho màn hình LIVE, chủ quán và khách -->
+  <div id="khung-san" class="khung-san">
+    <div id="san" class="san">
+      <header class="san-dau">
+        <div class="ten-quan" id="s-ten">🍻</div>
+        <div class="moi-vao" id="s-moi"></div>
+        <div class="dem" id="s-dem"></div>
+      </header>
+      <div class="luoi-ban" id="s-luoi"></div>
+      <aside class="nhat-ky" id="s-nhatky"></aside>
+      <footer class="duong" id="s-duong"><div class="vach"></div></footer>
+    </div>
+  </div>
+
+  <!-- Bảng điều khiển chủ quán -->
+  <aside id="bang-chu" class="bang-chu" hidden>
+    <div class="canh-bao">⚠️ Cửa sổ quản lý: <b>đừng phát cửa sổ này lên LIVE</b>. Phát cửa sổ “Màn hình LIVE”.</div>
+    <div class="dong-link"><input id="c-link-khach" readonly><button class="nut" data-copy="c-link-khach">Chép link khách</button></div>
+    <div class="dong-link"><a id="c-link-live" class="nut" target="_blank" rel="noopener">Mở màn hình LIVE ↗</a></div>
+    <h3>Việc cần xử lý <span id="c-so-viec" class="huy-hieu">0</span></h3>
+    <div id="c-hang-doi" class="hang-doi"></div>
+    <h3>Khách trong quán <span id="c-so-khach"></span></h3>
+    <div id="c-khach" class="ds-khach"></div>
+    <button id="c-dong" class="nut nguy">Đóng quán &amp; xóa dữ liệu</button>
+  </aside>
+
+  <!-- Giao diện khách -->
+  <section id="bang-khach" class="bang-khach" hidden>
+    <div id="k-vao" class="k-vao" hidden>
+      <h2 id="k-vao-ten">Vào quán</h2>
+      <label>Tên của bạn <input id="k-ten" maxlength="20" autocomplete="nickname" placeholder="vd: Tuấn Bia"></label>
+      <div class="chon-ban">
+        <button class="nut chinh" data-vao="ghep">Ngồi ghép 🤝</button>
+        <button class="nut" data-vao="rieng">Bàn riêng 🪑</button>
+      </div>
+      <p class="ghi-chu">Hoặc chạm vào một bàn còn chỗ trên sơ đồ phía trên.</p>
+      <p id="k-loi-vao" class="loi"></p>
+      <p class="ghi-chu nho">Tiền ảo, không nạp tiền thật. Đây là trò chơi giả lập; mọi tình huống xô xát, công an, CSGT chỉ là hoạt cảnh vui.</p>
+    </div>
+    <div id="k-choi" hidden>
+      <div class="k-vi" id="k-vi"></div>
+      <div id="k-viec"></div>
+      <div id="k-man-rieng"></div>
+      <nav class="tab" id="k-tab">
+        <button data-tab="goi" class="bat">🍺 Gọi món</button>
+        <button data-tab="moi">🎁 Mời bàn</button>
+        <button data-tab="giao">💬 Giao lưu</button>
+        <button data-tab="tien">💸 Tiền</button>
+        <button data-tab="ve">🚪 Về</button>
+      </nav>
+      <div id="k-noi-dung" class="noi-dung"></div>
+    </div>
+  </section>
+</div>
+<div id="thong-bao" class="thong-bao"></div>
+<div id="man-dong" class="man-dong" hidden></div>
+<script src="/quan.js"></script>
+</body>
+</html>

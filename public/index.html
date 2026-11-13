@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đi nhậu online — Mở quán</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="trang-mo">
+<main class="hop">
+  <h1>🍻 Đi nhậu online</h1>
+  <p class="mo-ta">Mở một quán nhậu vỉa hè ảo cho buổi LIVE. Khách vào bằng đường dẫn, tự đặt tên, không cần đăng ký. Tiền trong game là tiền ảo.</p>
+
+  <section id="buoc-tao">
+    <label>Tên quán
+      <input id="ten-quan" maxlength="40" value="Quán Nhậu Vỉa Hè">
+    </label>
+
+    <h2>Thực đơn <small>(giá tính bằng nghìn đồng ảo)</small></h2>
+    <div class="bang-menu-cuon">
+      <table class="bang-menu">
+        <thead><tr><th>Hình</th><th>Tên món</th><th>Giá (k)</th><th>Loại</th><th></th></tr></thead>
+        <tbody id="menu-body"></tbody>
+      </table>
+    </div>
+    <button type="button" id="them-mon" class="nut phu">+ Thêm món</button>
+    <p id="muc-tien" class="ghi-chu"></p>
+
+    <button id="mo-quan" class="nut chinh to">Mở quán</button>
+    <p id="loi" class="loi"></p>
+  </section>
+
+  <section id="buoc-xong" hidden>
+    <h2>✅ Quán đã mở!</h2>
+    <div class="the">
+      <h3>1. Đường dẫn mời khách <span class="nhan cong-khai">công khai</span></h3>
+      <p>Dán vào phần mô tả / bình luận ghim trên LIVE.</p>
+      <div class="dong-link"><input id="link-khach" readonly><button class="nut" data-copy="link-khach">Chép</button></div>
+      <p id="ghi-chu-lan" class="ghi-chu"></p>
+    </div>
+    <div class="the">
+      <h3>2. Màn hình phát LIVE <span class="nhan cong-khai">an toàn để phát</span></h3>
+      <p>Mở trong một cửa sổ riêng rồi chia sẻ cửa sổ này lên TikTok LIVE Studio / OBS.</p>
+      <div class="dong-link"><input id="link-live" readonly><button class="nut" data-copy="link-live">Chép</button><a id="mo-live" class="nut" target="_blank" rel="noopener">Mở</a></div>
+    </div>
+    <div class="the bi-mat">
+      <h3>3. Đường dẫn quản lý <span class="nhan mat">BÍ MẬT</span></h3>
+      <p>Chỉ mình chủ quán giữ. <b>Không</b> phát cửa sổ này lên LIVE, không dán ở đâu công khai. Mất đường dẫn này thì không lấy lại quyền chủ được.</p>
+      <div class="dong-link"><input id="link-chu" type="password" readonly><button class="nut" data-copy="link-chu">Chép</button><a id="mo-chu" class="nut chinh" target="_blank" rel="noopener">Vào quản lý</a></div>
+    </div>
+  </section>
+</main>
+<script src="/index.js"></script>
+</body>
+</html>
