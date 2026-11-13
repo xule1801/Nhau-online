@@ -4,21 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Đi nhậu online</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍻</text></svg>">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div id="app">
-  <!-- Sân khấu 2D: dùng chung cho màn hình LIVE, chủ quán và khách -->
+  <!-- Sân khấu 3D: dùng chung cho màn hình LIVE, chủ quán và khách -->
   <div id="khung-san" class="khung-san">
     <div id="san" class="san">
+      <div id="s-3d" class="s-3d"></div>
       <header class="san-dau">
         <div class="ten-quan" id="s-ten">🍻</div>
         <div class="moi-vao" id="s-moi"></div>
         <div class="dem" id="s-dem"></div>
       </header>
-      <div class="luoi-ban" id="s-luoi"></div>
       <aside class="nhat-ky" id="s-nhatky"></aside>
-      <footer class="duong" id="s-duong"><div class="vach"></div></footer>
+      <footer class="duong" id="s-duong"></footer>
+      <button id="nut-goc" class="nut-goc" hidden>🔭 Toàn quán</button>
     </div>
   </div>
 
@@ -43,7 +45,7 @@
         <button class="nut chinh" data-vao="ghep">Ngồi ghép 🤝</button>
         <button class="nut" data-vao="rieng">Bàn riêng 🪑</button>
       </div>
-      <p class="ghi-chu">Hoặc chạm vào một bàn còn chỗ trên sơ đồ phía trên.</p>
+      <p class="ghi-chu">Hoặc chạm vào một bàn còn chỗ trong quán phía trên.</p>
       <p id="k-loi-vao" class="loi"></p>
       <p class="ghi-chu nho">Tiền ảo, không nạp tiền thật. Đây là trò chơi giả lập; mọi tình huống xô xát, công an, CSGT chỉ là hoạt cảnh vui.</p>
     </div>
@@ -64,6 +66,10 @@
 </div>
 <div id="thong-bao" class="thong-bao"></div>
 <div id="man-dong" class="man-dong" hidden></div>
+<script type="importmap">
+{ "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+</script>
 <script src="/quan.js"></script>
+<script type="module" src="/san3d.js"></script>
 </body>
 </html>

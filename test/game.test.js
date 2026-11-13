@@ -52,11 +52,12 @@ test('xếp bàn: ghép vào bàn đông nhất chưa đầy, bàn tối đa 4 n
   const a = vao(q, 'An', 'rieng');
   const b = vao(q, 'Bình', 'ghep');
   assert.equal(b.ban, a.ban);
-  vao(q, 'Cường', 3);
-  vao(q, 'Dũng', 3);
-  vao(q, 'Em', 3);
-  vao(q, 'Phúc', 3);
-  assert.ok(q.join('Giang', 3).loi);
+  const so = a.ban === 3 ? 4 : 3; // bàn riêng giờ bốc ngẫu nhiên, nên chọn bàn khác bàn của An
+  vao(q, 'Cường', so);
+  vao(q, 'Dũng', so);
+  vao(q, 'Em', so);
+  vao(q, 'Phúc', so);
+  assert.ok(q.join('Giang', so).loi);
   const q2 = taoQuan();
   for (let i = 0; i < 80; i++) vao(q2, 'Khach ' + i, 'ghep');
   assert.match(q2.join('Muon', 'ghep').loi, /hết chỗ/);
@@ -275,4 +276,79 @@ test('chống bấm liên tục', () => {
   const tra = q.menu.find((m) => m.ten === 'Trà đá');
   ok(q.act(p.id, { type: 'goiMon', mon: tra.id }));
   assert.match(q.act(p.id, { type: 'goiMon', mon: tra.id }).loi, /chậm/);
+});
+
+test('khách ra về: chỉ dọn món của khách đó, món người khác vẫn còn', () => {
+  const q = taoQuan({ tiLeCsgt: 0 });
+  const a = vao(q, 'An', 1);
+  const b = vao(q, 'Bình', 1);
+  const tra = q.menu.find((m) => m.ten === 'Trà đá');
+  const lac = q.menu.find((m) => m.ten === 'Lạc rang');
+  ok(q.act(a.id, { type: 'goiMon', mon: tra.id }));
+  ok(q.act(a.id, { type: 'goiMon', mon: lac.id }));
+  ok(q.act(b.id, { type: 'goiMon', mon: lac.id }));
+  assert.equal(q.ban[0].mon.length, 3);
+  ok(q.act(a.id, { type: 'roi', cach: 'tra' }));
+  assert.deepEqual(q.ban[0].mon.map((m) => m.cuaAi), [b.id]);
+});
+
+test('bàn không còn ai thì dọn sạch; chuyển bàn thì dọn phần ở bàn cũ', () => {
+  const q = taoQuan({ tiLeCsgt: 0 });
+  const a = vao(q, 'An', 1);
+  const tra = q.menu.find((m) => m.ten === 'Trà đá');
+  ok(q.act(a.id, { type: 'goiMon', mon: tra.id }));
+  ok(q.act(a.id, { type: 'ngoi', ban: 2 }));
+  assert.equal(q.ban[0].mon.length, 0);
+  ok(q.act(a.id, { type: 'goiMon', mon: tra.id }));
+  ok(q.act(a.id, { type: 'roi', cach: 'tra' }));
+  assert.equal(q.ban[1].mon.length, 0);
+});
+
+test('món được mời thuộc về người nhận: người nhận về thì dọn phần đó', () => {
+  const q = taoQuan({ tiLeCsgt: 0 }, [0.99]);
+  const dai = vao(q, 'Đại Gia', 1);
+  const x = vao(q, 'Xuân', 2);
+  const y = vao(q, 'Yến', 2);
+  const tra = q.menu.find((m) => m.ten === 'Trà đá');
+  ok(q.act(dai.id, { type: 'moiBan', ban: 2, mon: tra.id }));
+  assert.equal(q.ban[1].mon.length, 2);
+  ok(q.act(x.id, { type: 'roi', cach: 'tra' }));
+  assert.deepEqual(q.ban[1].mon.map((m) => m.cuaAi), [y.id]);
+});
+
+test('bị dân phòng đưa đi hoặc bị mời ra cũng dọn phần của mình', () => {
+  const q = taoQuan({ danPhongSau: 1000 });
+  const a = vao(q, 'An', 1);
+  const b = vao(q, 'Bình', 1);
+  const c = vao(q, 'Cường', 1);
+  const tra = q.menu.find((m) => m.ten === 'Trà đá');
+  for (const p of [a, b, c]) ok(q.act(p.id, { type: 'goiMon', mon: tra.id }));
+  ok(q.act(a.id, { type: 'choang', den: b.id }));
+  q.troi(1001);
+  assert.equal(a.trangThai, 'phuong');
+  ok(q.adminAct({ type: 'moiRa', pid: c.id }));
+  assert.deepEqual(q.ban[0].mon.map((m) => m.cuaAi), [b.id]);
+});
+
+test('chọn bàn ngẫu nhiên: bàn riêng bốc trong số bàn trống, ghép chỉ vào bàn có người còn ghế', () => {
+  const vals = [0.99, 0.5, 0.0];
+  const q = new Quan({ id: 't', cauHinh: { hoiChieu: 0 }, rngBan: () => vals.shift() ?? 0.5 });
+  const a = q.players.get(q.join('An', 'rieng').id);
+  assert.equal(a.ban, 20); // 0.99 → bàn trống cuối
+  const b = q.players.get(q.join('Bình', 'rieng').id);
+  assert.equal(b.ban, 10); // 0.5 → bàn trống thứ 10 trong 19 bàn còn lại (1..19)
+  const c = q.players.get(q.join('Cường', 'ghep').id);
+  assert.ok([a.ban, b.ban].includes(c.ban)); // ghép thì không ngồi bàn trống
+});
+
+test('vào lại nhiều lần thì rải ra nhiều bàn khác nhau', () => {
+  const q = new Quan({ id: 't', cauHinh: { hoiChieu: 0 } });
+  const ban = new Set();
+  for (let i = 0; i < 30; i++) {
+    const p = q.players.get(q.join('Khach ' + i, 'rieng').id);
+    ban.add(p.ban);
+    q.adminAct({ type: 'moiRa', pid: p.id });
+    q.tenCam.clear();
+  }
+  assert.ok(ban.size >= 8, `chỉ rơi vào ${ban.size} bàn`);
 });

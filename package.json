@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "nhau-online",
   "version": "0.1.0",
   "private": true,
@@ -13,6 +13,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "three": "^0.187.0",
     "ws": "^8.18.0"
   }
 }

@@ -16,7 +16,7 @@ const MAC_DINH = {
   matKetNoi: 120_000, // mất kết nối quá lâu → tự rời quán
   giuKetQua: 600_000, // giữ màn hình kết quả cho khách đã về
   tiLeCsgt: 0.4,
-  tiLePhatHienQuyt: 0.5,
+  tiLePhatHienQuyt: 0.9, // chỉ ~10% chuồn êm
   tiLeNanNi: 0.3,
   hoiChieu: 700, // khoảng cách tối thiểu giữa hai hành động của một khách
 };
@@ -53,6 +53,32 @@ const CAU_KHIA = [
 
 const MAU = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#ec407a', '#8d6e63', '#26c6da'];
 const MAT = ['😀', '😎', '🤠', '😏', '🥸', '😺', '🐵', '🐶', '🐷', '🐸', '🦊', '🐻'];
+
+// ---------- ngoại hình nhân vật 3D ----------
+const DA = ['#f6d3b3', '#eec19a', '#e0a87e', '#c98b62', '#a86f4c'];
+const TOC = ['#1b1612', '#2b1d14', '#3d2a1c', '#6b4a2e', '#9a9a9a', '#c2793a'];
+const MAU_AO = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#fb8c00', '#8e24aa', '#ffffff', '#212121', '#00897b', '#6d4c41', '#90caf9', '#f48fb1'];
+const MAU_QUAN = ['#263238', '#37474f', '#5d4037', '#1a237e', '#33691e', '#795548', '#9e9e9e'];
+const KIEU_AO = ['trơn', 'kẻ', 'caro', 'hoa', 'ba lỗ', 'đội tuyển'];
+const KIEU_TOC = ['đinh', 'mái', 'dài', 'hói', 'xoăn'];
+const MU = [null, null, null, 'lưỡi trai', 'bảo hiểm'];
+function taoHinh(r = Math.random) {
+  const chon = (a) => a[Math.floor(r() * a.length)];
+  return {
+    da: chon(DA),
+    toc: chon(TOC),
+    kieuToc: chon(KIEU_TOC),
+    ao: chon(MAU_AO),
+    ao2: chon(MAU_AO),
+    kieuAo: chon(KIEU_AO),
+    quan: chon(MAU_QUAN),
+    mu: chon(MU),
+    muMau: chon(MAU_AO),
+    kinh: r() < 0.2,
+    rau: r() < 0.25,
+    beo: 0.9 + r() * 0.3,
+  };
+}
 
 // ---------- tiện ích ----------
 const boDau = (s) =>
@@ -112,7 +138,9 @@ function tinhMucTien(menu) {
 const lamTron5 = (x) => Math.max(5, Math.round(x / 5) * 5);
 
 class Quan {
-  constructor({ id, ten, menu, cauHinh = {}, rng = Math.random, now = Date.now, taoMa }) {
+  constructor({ id, ten, menu, cauHinh = {}, rng = Math.random, rngHinh = Math.random, rngBan = Math.random, now = Date.now, taoMa }) {
+    this.rngBan = rngBan; // chọn bàn ngẫu nhiên, tách khỏi luật chơi để test ổn định
+    this.rngHinh = rngHinh; // ngoại hình dùng nguồn ngẫu nhiên riêng, không ảnh hưởng luật chơi
     const kt = kiemTraThucDon(menu ?? THUC_DON_MAC_DINH);
     if (kt.loi) throw new Error(kt.loi);
     this.id = id;
@@ -170,18 +198,15 @@ class Quan {
   _chonBan(chon) {
     const g = this.cfg.ghePerBan;
     const dem = this.ban.map((b) => this._taiBan(b.so).length);
+    // bốc ngẫu nhiên để mỗi lần vào không ngồi mãi một bàn
+    const boc = (ds) => (ds.length ? ds[Math.floor(this.rngBan() * ds.length)] + 1 : null);
+    const loc = (dk) => dem.map((n, i) => (dk(n) ? i : -1)).filter((i) => i >= 0);
     if (chon === 'ghep') {
-      let tot = -1;
-      dem.forEach((n, i) => {
-        if (n > 0 && n < g && (tot < 0 || n > dem[tot])) tot = i;
-      });
-      if (tot >= 0) return tot + 1;
+      const coNguoi = loc((n) => n > 0 && n < g);
+      if (coNguoi.length) return boc(coNguoi);
       chon = 'rieng';
     }
-    if (chon === 'rieng') {
-      const i = dem.findIndex((n) => n === 0);
-      return i >= 0 ? i + 1 : null;
-    }
+    if (chon === 'rieng') return boc(loc((n) => n === 0));
     const so = Number(chon);
     if (!Number.isInteger(so) || so < 1 || so > this.cfg.soBan) return null;
     return dem[so - 1] < g ? so : null;
@@ -192,10 +217,20 @@ class Quan {
   _monTheoId(id) {
     return this.menu.find((m) => m.id === String(id));
   }
-  _datMon(so, mon, tu) {
+  // Món trên bàn ghi rõ của ai (người đang ăn/uống) để khi người đó rời bàn thì dọn đúng phần của họ.
+  _datMon(so, mon, cuaAi) {
     const b = this.ban[so - 1];
-    b.mon.push({ emoji: mon.emoji, tu });
-    if (b.mon.length > 12) b.mon.shift();
+    b.mon.push({ emoji: mon.emoji, loai: mon.loai, to: mon.gia >= 150, cuaAi });
+    if (b.mon.length > 20) b.mon.shift();
+  }
+  _donBan(p, so = p.ban) {
+    if (!so) return;
+    const b = this.ban[so - 1];
+    const truoc = b.mon.length;
+    b.mon = b.mon.filter((m) => m.cuaAi !== p.id);
+    // bàn không còn ai thì dọn sạch
+    if (!this._taiBan(so).some((k) => k.id !== p.id)) b.mon = [];
+    if (b.mon.length !== truoc) this._log(`🧹 Dọn phần của ${p.ten} ở bàn ${so}`, 'don', { ban: so });
   }
   // Thanh toán hóa đơn + khoản thêm; thiếu thì dùng hạn mức cho thiếu, vẫn thiếu thì ghi nợ.
   _thanhToan(p, them = 0) {
@@ -210,6 +245,7 @@ class Quan {
     return { tra, conLai };
   }
   _roiBan(p) {
+    this._donBan(p);
     p.ban = null;
     // khách rời bàn thì hủy các vụ việc/yêu cầu đang chờ liên quan
     for (const [id, y] of this.yeuCau) if (y.tu === p.id || y.den === p.id) this.yeuCau.delete(id);
@@ -259,6 +295,7 @@ class Quan {
       khoa: kt.khoa,
       mau: MAU[Math.floor(this.rng() * MAU.length)],
       mat: MAT[Math.floor(this.rng() * MAT.length)],
+      hinh: taoHinh(this.rngHinh),
       tien,
       tienDau: tien,
       tab: 0,
@@ -331,6 +368,10 @@ class Quan {
       p.ban = cu;
       return {};
     }
+    if (cu) {
+      p.ban = cu;
+      this._donBan(p, cu); // chuyển bàn: dọn phần của mình ở bàn cũ
+    }
     p.ban = so;
     p.trangThai = 'ngoi';
     this._log(cu ? `${p.ten} chuyển từ bàn ${cu} sang bàn ${so}` : `${p.ten} quay lại, ngồi bàn ${so}`, 'vao', { ban: so });
@@ -363,7 +404,7 @@ class Quan {
     if (this._gioiHan(p) < gia) return { loi: `Mời cả bàn ${so} hết ${gia}k, không đủ tiền.` };
     p.tab += gia;
     if (CO_CON.has(mon.loai)) for (const k of khach) k.daUong++;
-    for (let i = 0; i < khach.length; i++) this._datMon(so, mon, p.id);
+    for (const k of khach) this._datMon(so, mon, k.id); // mỗi phần thuộc về người nhận
     this._noi(p.id, `Mời bàn ${so} ${mon.emoji}!`);
     this._log(`${p.ten} (bàn ${p.ban}) mời cả bàn ${so} ${khach.length}× ${mon.emoji} ${mon.ten}`, 'moi', { ban: so, tuBan: p.ban });
     return {};
@@ -823,7 +864,7 @@ class Quan {
     const khach = [];
     for (const p of this.players.values()) {
       if (p.trangThai === 've') continue;
-      khach.push({ id: p.id, ten: p.ten, mau: p.mau, mat: p.mat, ban: p.ban, trangThai: p.trangThai, online: p.online, tinhTao: p.daUong === 0, say: p.daUong >= 6 ? 2 : p.daUong >= 3 ? 1 : 0 });
+      khach.push({ id: p.id, ten: p.ten, mau: p.mau, mat: p.mat, hinh: p.hinh, ban: p.ban, trangThai: p.trangThai, online: p.online, tinhTao: p.daUong === 0, say: p.daUong >= 6 ? 2 : p.daUong >= 3 ? 1 : 0 });
     }
     const vu = [];
     for (const v of this.vuViec.values()) {
@@ -837,7 +878,7 @@ class Quan {
       cauKhia: CAU_KHIA,
       muc: this.muc,
       khach,
-      ban: this.ban.map((b) => ({ so: b.so, mon: b.mon.map((m) => m.emoji) })),
+      ban: this.ban.map((b) => ({ so: b.so, mon: b.mon.map((m) => ({ e: m.emoji, l: m.loai, to: m.to, ai: m.cuaAi })) })),
       vu,
       bongBong: this.bongBong.map((b) => ({ pid: b.pid, text: b.text })),
       nhatKy: this.nhatKy.slice(-15),

@@ -14,6 +14,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const TOI_DA_QUAN = Number(process.env.MAX_QUAN) || 30;
 const QUAN_TRONG_DONG_SAU = 30 * 60_000; // không ai kết nối 30 phút → xóa quán
 const PUBLIC = path.join(__dirname, '..', 'public');
+const THREE_BUILD = path.join(__dirname, '..', 'node_modules', 'three', 'build');
+const THREE_ADDONS = path.join(__dirname, '..', 'node_modules', 'three', 'examples', 'jsm');
 
 const quanMap = new Map(); // id -> { quan, adminHash, conns:Set, trongTu, ipCam:Set }
 
@@ -77,8 +79,12 @@ const server = http.createServer(async (req, res) => {
 
     let p = url.pathname === '/' ? '/index.html' : url.pathname;
     if (/^\/q\/[\w-]+$/.test(p)) p = '/quan.html'; // đường dẫn mời đẹp: /q/<id>
-    const file = path.normalize(path.join(PUBLIC, p));
-    if (!file.startsWith(PUBLIC)) return guiJson(res, 403, { loi: 'Cấm' });
+    // Thư viện three.js phục vụ thẳng từ node_modules (không phụ thuộc CDN)
+    let goc = PUBLIC;
+    if (p.startsWith('/vendor/three/addons/')) (goc = THREE_ADDONS), (p = p.slice('/vendor/three/addons'.length));
+    else if (p.startsWith('/vendor/three/')) (goc = THREE_BUILD), (p = p.slice('/vendor/three'.length));
+    const file = path.normalize(path.join(goc, p));
+    if (!file.startsWith(goc + path.sep)) return guiJson(res, 403, { loi: 'Cấm' });
     fs.readFile(file, (err, data) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -86,7 +92,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': goc === PUBLIC ? 'no-cache' : 'public, max-age=86400',
         'Referrer-Policy': 'no-referrer',
         'X-Content-Type-Options': 'nosniff',
       });

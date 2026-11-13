@@ -65,6 +65,7 @@ function nhan(m) {
     if (vaiTro === 'chu') veChu();
   } else if (m.type === 'me') {
     S.me = m.s;
+    ve3D();
     veKhach();
   } else if (m.type === 'admin') {
     S.admin = m.s;
@@ -101,8 +102,22 @@ function thongBao(msg) {
   hetTB = setTimeout(() => el.classList.remove('hien'), 2600);
 }
 
-// ===== Sân khấu 2D =====
-const cacheBan = new Map();
+// ===== Sân khấu 3D (public/san3d.js) =====
+// Khách đang ngồi thì mặc định nhìn gần bàn mình; LIVE/chủ quán nhìn toàn quán.
+S.gocNhin = vaiTro === 'khach' ? 'ban' : 'toan';
+function ve3D() {
+  if (!S.pub) return;
+  window.San3D?.capNhat(S.pub, { vaiTro, myId: S.myId, me: S.me, target: S.target, targetBan: S.targetBan, gocNhin: S.gocNhin });
+  const nut = $('#nut-goc');
+  nut.hidden = !(vaiTro === 'khach' && S.me?.trangThai === 'ngoi');
+  nut.textContent = S.gocNhin === 'ban' ? '🔭 Xem toàn quán' : '🍺 Về bàn mình';
+}
+window.ve3D = ve3D;
+$('#nut-goc').addEventListener('click', (e) => {
+  e.stopPropagation();
+  S.gocNhin = S.gocNhin === 'ban' ? 'toan' : 'ban';
+  ve3D();
+});
 function khachTheoId() {
   const m = new Map();
   for (const k of S.pub.khach) m.set(k.id, k);
@@ -118,52 +133,7 @@ function veSan() {
   const ngoi = p.khach.filter((k) => k.trangThai !== 've').length;
   $('#s-dem').innerHTML = `👥 ${ngoi}/${p.quan.soBan * p.quan.ghe}`;
 
-  const luoi = $('#s-luoi');
-  if (!luoi.children.length) {
-    for (let i = 1; i <= p.quan.soBan; i++) {
-      const d = document.createElement('div');
-      d.className = 'ban';
-      d.dataset.ban = i;
-      luoi.appendChild(d);
-    }
-  }
-  const theoBan = new Map();
-  for (const k of p.khach) if (k.trangThai === 'ngoi' && k.ban) (theoBan.get(k.ban) || theoBan.set(k.ban, []).get(k.ban)).push(k);
-  const bong = new Map(p.bongBong.map((b) => [b.pid, b.text]));
-  const danh = new Set();
-  const banDanh = new Map();
-  for (const v of p.vu) {
-    if (v.loai !== 'xoxat') continue;
-    v.nguoi.forEach((id) => danh.add(id));
-    banDanh.set(v.ban, v);
-    banDanh.set(v.banMuc, v);
-  }
-  const bKhia = new Set(p.vu.filter((v) => v.loai === 'khia').map((v) => v.den));
-
-  for (const b of p.ban) {
-    const ds = theoBan.get(b.so) || [];
-    const v = banDanh.get(b.so);
-    const ghe = [0, 1, 2, 3]
-      .map((i) => {
-        const k = ds[i];
-        if (!k) return `<div class="ghe g${i} trong"></div>`;
-        const cls = ['nguoi', k.say ? 'say' + k.say : '', danh.has(k.id) ? 'danh' : '', !k.online ? 'off' : '', S.target === k.id ? 'chon' : '', k.id === S.myId ? 'toi' : '', bKhia.has(k.id) ? 'bi-khia' : ''].join(' ');
-        const bb = bong.get(k.id);
-        return `<div class="ghe g${i}"><div class="${cls}" data-pid="${k.id}" style="--mau:${k.mau}"><span>${esc(k.mat)}</span></div><div class="ten">${esc(k.ten)}</div>${bb ? `<div class="bong">${esc(bb)}</div>` : ''}</div>`;
-      })
-      .join('');
-    const mon = b.mon.slice(-8).map((e) => `<span>${esc(e)}</span>`).join('');
-    const html = `<div class="so-ban">Bàn ${b.so}</div><div class="mat-ban">${mon}</div>${ghe}${v ? `<div class="no">💥</div><div class="dem-nguoc">🚔 ${giay(v.conLai)}</div>` : ''}`;
-    const el = luoi.children[b.so - 1];
-    el.classList.toggle('co-xoxat', !!v);
-    el.classList.toggle('chon', S.targetBan === b.so);
-    el.classList.toggle('cua-toi', S.me?.ban === b.so && S.me?.trangThai === 'ngoi');
-    el.classList.toggle('day', ds.length >= p.quan.ghe);
-    if (cacheBan.get(b.so) !== html) {
-      cacheBan.set(b.so, html);
-      el.innerHTML = html;
-    }
-  }
+  ve3D();
 
   // chỉ vẽ lại nhật ký khi có dòng mới, để hiệu ứng không chạy lại liên tục
   const nkMoi = p.nhatKy.slice().reverse().slice(0, 12);
@@ -192,7 +162,7 @@ function veSan() {
     d.className = 'canh canh-' + h.loai;
     d.innerHTML = noiDung;
     duong.appendChild(d);
-    setTimeout(() => d.remove(), 7800);
+    setTimeout(() => d.remove(), 12000);
   }
 }
 
@@ -209,29 +179,27 @@ function coGian() {
 }
 window.addEventListener('resize', coGian);
 
-// Chạm vào sơ đồ: chọn người / chọn bàn
-$('#san').addEventListener('click', (e) => {
-  if (vaiTro !== 'khach') return;
-  const nguoi = e.target.closest('.nguoi');
-  const ban = e.target.closest('.ban');
+// Chạm vào cảnh 3D (san3d.js gọi): chọn người / chọn bàn
+window.chon3D = ({ pid, ban }) => {
+  if (vaiTro !== 'khach' || !S.pub) return;
+  if (pid && !ban) ban = S.pub.khach.find((k) => k.id === pid)?.ban;
   if (!S.myId || S.me?.trangThai === 'sanh') {
     if (ban) {
-      if (S.myId) hanhDong({ type: 'ngoi', ban: Number(ban.dataset.ban) });
-      else vaoQuan(Number(ban.dataset.ban));
+      if (S.myId) hanhDong({ type: 'ngoi', ban });
+      else vaoQuan(ban);
     }
     return;
   }
-  if (nguoi && nguoi.dataset.pid !== S.myId) {
-    S.target = nguoi.dataset.pid;
+  if (pid && pid !== S.myId) {
+    S.target = pid;
     if (!['giao', 'tien'].includes(S.tab)) S.tab = 'giao';
   } else if (ban) {
-    S.targetBan = Number(ban.dataset.ban);
+    S.targetBan = ban;
     if (S.tab !== 'moi' && S.targetBan !== S.me?.ban) S.tab = 'moi';
   }
-  cacheBan.clear();
-  veSan();
+  ve3D();
   veKhach(true);
-});
+};
 
 // ===== Giao diện khách =====
 function vaoQuan(ban) {
@@ -392,13 +360,11 @@ function noiDungTab(me) {
 $('#bang-khach').addEventListener('change', (e) => {
   if (e.target.matches('.chon-nguoi')) {
     S.target = e.target.value || null;
-    cacheBan.clear();
-    veSan();
+    ve3D();
   }
   if (e.target.matches('.chon-ban-moi')) {
     S.targetBan = Number(e.target.value) || null;
-    cacheBan.clear();
-    veSan();
+    ve3D();
     veKhach(true);
   }
 });
